@@ -21,6 +21,7 @@ export default function Chatbot() {
   // State untuk Sesi Obrolan
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [askCounts, setAskCounts] = useState({});
 
   // State UI Tambahan
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -101,6 +102,7 @@ export default function Chatbot() {
       sleep_category: null, screen_time_category: null, stress_category: null,
       mental_risk_score: null, support_category: null
     });
+    setAskCounts({});
   };
 
   // Handler membuat sesi baru (Lazy Creation)
@@ -121,6 +123,7 @@ export default function Chatbot() {
       sleep_category: null, screen_time_category: null, stress_category: null,
       mental_risk_score: null, support_category: null
     });
+    setAskCounts({});
   };
 
   // Handler menghapus sesi
@@ -271,9 +274,16 @@ export default function Chatbot() {
       const res = await fetch(`${API_URL}/chat/agent`, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ message: text, currentState, session_id: targetSessionId, mode: activeMode })
+        body: JSON.stringify({ message: text, currentState, session_id: targetSessionId, mode: activeMode, ask_counts: askCounts })
       });
       const data = await res.json();
+      
+      if (data.target_feature) {
+        setAskCounts(prev => ({
+          ...prev,
+          [data.target_feature]: (prev[data.target_feature] || 0) + 1
+        }));
+      }
 
       setMessages(prev => [...prev, {
         id: Date.now() + 1, sender: 'ai',
@@ -305,20 +315,38 @@ export default function Chatbot() {
       id: Date.now(), sender: 'user', text: "Saya ingin melihat hasil analisisnya sekarang."
     }]);
 
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const chatSummary = messages.filter(m => m.sender === 'user').map(m => m.text).join(" | ");
+
     fetch(`${API_URL}/chat/predict`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ features: stateToPredict })
+      headers: headers,
+      body: JSON.stringify({ features: stateToPredict, session_id: currentSessionId, chat_history: chatSummary })
     })
       .then(r => r.json())
       .then(prediction => {
+        if (prediction.is_insufficient_data) {
+          setMessages(msgs => [...msgs, {
+            id: Date.now() + 2,
+            sender: 'ai',
+            text: "🛑 " + prediction.error_message
+          }]);
+          return;
+        }
+
         setMessages(msgs => [...msgs, {
           id: Date.now() + 2,
           sender: 'ai',
           type: 'result',
           riskLevel: prediction.risk_level,
           burnoutScore: prediction.burnout_score,
-          recommendation: prediction.genai_recommendation
+          recommendation: prediction.genai_recommendation,
+          expertReference: prediction.expert_reference,
+          linkReferensi: prediction.link_referensi,
+          therapyRecommendation: prediction.therapy_recommendation,
+          linkTerapi: prediction.link_terapi
         }]);
 
         if (token) {
@@ -371,7 +399,9 @@ export default function Chatbot() {
         const prediction = {
           risk_level: riskLevel,
           burnout_score: burnoutScore,
-          genai_recommendation: recommendation
+          genai_recommendation: recommendation,
+          expert_reference: 'Standar Panduan Psikologi Umum',
+          therapy_recommendation: 'Konseling Mandiri / Self-care'
         };
 
         setMessages(msgs => [...msgs, {
@@ -380,7 +410,9 @@ export default function Chatbot() {
           type: 'result',
           riskLevel: prediction.risk_level,
           burnoutScore: prediction.burnout_score,
-          recommendation: prediction.genai_recommendation
+          recommendation: prediction.genai_recommendation,
+          expertReference: prediction.expert_reference,
+          therapyRecommendation: prediction.therapy_recommendation
         }]);
 
         if (token) {
@@ -603,9 +635,26 @@ export default function Chatbot() {
                     </div>
                   </div>
                   <div className="p-4" style={{ background: 'var(--bg-surface)' }}>
-                    <p className="text-xs font-semibold mb-2" style={{ color: 'var(--t-brand)' }}>💙 Pesan untukmu</p>
+                    <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: 'var(--t-brand)' }}>
+                      <Sparkles className="w-3.5 h-3.5" /> Pesan Personal untukmu
+                    </p>
                     <p className="text-sm leading-relaxed" style={{ color: 'var(--t-primary)' }}>{msg.recommendation}</p>
                   </div>
+                  {msg.expertReference && (
+                    <div className="p-4 border-t border-[var(--border)]" style={{ background: 'var(--bg-subtle)' }}>
+                      <p className="text-xs font-semibold mb-2 text-indigo-500">📖 Landasan Teori / Assessment Tool</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--t-primary)' }}>{msg.expertReference}</p>
+                      {msg.linkReferensi && (
+                        <a href={msg.linkReferensi} target="_blank" rel="noreferrer" className="text-xs text-blue-500 underline mt-1 inline-block">Baca Selengkapnya &rarr;</a>
+                      )}
+                      
+                      <p className="text-xs font-semibold mt-3 mb-2 text-teal-500">💡 Rekomendasi Terapi</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'var(--t-primary)' }}>{msg.therapyRecommendation}</p>
+                      {msg.linkTerapi && (
+                        <a href={msg.linkTerapi} target="_blank" rel="noreferrer" className="text-xs text-blue-500 underline mt-1 inline-block">Pelajari Terapi Ini &rarr;</a>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className={`flex gap-3 max-w-[90%] sm:max-w-[82%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
