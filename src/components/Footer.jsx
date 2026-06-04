@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HeartPulse, MessageSquarePlus, Phone, ExternalLink } from 'lucide-react';
+import { HeartPulse, MessageSquarePlus } from 'lucide-react';
 import FeedbackModal from './FeedbackModal';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,18 +36,8 @@ export default function Footer() {
                   <MessageSquarePlus className="w-3.5 h-3.5" />
                   Beri Masukan / Laporkan Bug
                 </button>
-                <div className="w-px h-3" style={{ background: 'var(--border)' }} />
               </>
             )}
-            <a href="#" className="flex items-center gap-1.5 hover:text-brand-400 transition-colors">
-              <Phone className="w-3.5 h-3.5" />
-              Bantuan Darurat
-            </a>
-            <div className="hidden sm:block w-px h-3" style={{ background: 'var(--border)' }} />
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hidden sm:flex items-center gap-1.5 hover:text-brand-400 transition-colors">
-              <ExternalLink className="w-3.5 h-3.5" />
-              Instagram
-            </a>
           </div>
         </div>
       </footer>
