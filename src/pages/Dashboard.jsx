@@ -406,45 +406,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Calendar + Activities */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="glass-card p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-semibold flex items-center gap-2" style={T.primary}>
-              <CalendarIcon className="w-4 h-4 text-brand-400" />Kalender Mood
-            </h3>
-          </div>
-          <p className="text-xs mb-2" style={T.muted}>
-            {!token ? 'Login untuk menyimpan riwayat mood'
-              : new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
-          </p>
-          <div className="flex-1">{renderCalendar()}</div>
-          <div className="mt-4 pt-4 flex justify-center gap-5 text-xs" style={{ borderTop: '1px solid var(--border)', color: 'var(--t-muted)' }}>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Senang</div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" />Biasa</div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-rose-500" />Sedih</div>
-          </div>
-        </div>
-
-        <div className="glass-card p-5">
-          <h3 className="font-semibold mb-4 flex items-center gap-2" style={T.primary}>
-            <Sparkles className="w-4 h-4 text-amber-400" />Aktivitas yang Disarankan
+      {/* Calendar */}
+      <div className="glass-card p-5 flex flex-col max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-semibold flex items-center gap-2" style={T.primary}>
+            <CalendarIcon className="w-4 h-4 text-brand-400" />Kalender Mood
           </h3>
-          <ul className="space-y-3">
-            {[
-              { task: 'Meditasi 10 menit', icon: '🧘', bg: 'rgba(99,102,241,0.15)' },
-              { task: 'Jurnal rasa syukur', icon: '📓', bg: 'rgba(245,158,11,0.15)' },
-              { task: 'Jalan sore 15 menit', icon: '🚶', bg: 'rgba(16,185,129,0.15)' },
-              { task: 'Minum air putih', icon: '💧', bg: 'rgba(59,130,246,0.15)' },
-            ].map((item, i) => (
-              <li key={i} className="flex items-center gap-3 p-2 rounded-xl transition-all cursor-default group"
-                style={{ ':hover': { background: 'var(--bg-subtle)' } }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 transition-transform group-hover:scale-110"
-                  style={{ background: item.bg }}>{item.icon}</div>
-                <span className="text-sm" style={T.secondary}>{item.task}</span>
-              </li>
-            ))}
-          </ul>
+        </div>
+        <p className="text-xs mb-2" style={T.muted}>
+          {!token ? 'Login untuk menyimpan riwayat mood'
+            : new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })}
+        </p>
+        <div className="flex-1">{renderCalendar()}</div>
+        <div className="mt-4 pt-4 flex justify-center gap-5 text-xs" style={{ borderTop: '1px solid var(--border)', color: 'var(--t-muted)' }}>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />Senang</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-500" />Biasa</div>
+          <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-rose-500" />Sedih</div>
         </div>
       </div>
     </div>

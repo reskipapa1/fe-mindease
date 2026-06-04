@@ -9,6 +9,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import AuthModal from './components/AuthModal';
+import Footer from './components/Footer';
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
                 </Routes>
               </div>
             </main>
+            <Footer />
           </div>
         </BrowserRouter>
       </AuthProvider>

@@ -4,6 +4,7 @@ import {
   AlertCircle, Info, Plus, X, Send, Loader2, Shield,
   Mic, Headphones, Hash, Compass, Users, CornerUpLeft
 } from 'lucide-react';
+import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -18,6 +19,7 @@ export default function Komunitas() {
   const [isPosting, setIsPosting] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const chatEndRef = useRef(null);
+  const [realtimeOnlineUsers, setRealtimeOnlineUsers] = useState([]);
 
   const [channels, setChannels] = useState([
     { slug: 'curhat-umum', name: '💬-curhat-umum', description: 'Saluran bebas untuk membagikan keluh kesah dan cerita apa saja.' },
@@ -56,6 +58,28 @@ export default function Komunitas() {
     fetchPosts();
     fetchChannels();
   }, []);
+
+  useEffect(() => {
+    // Setup Socket.IO connection
+    const socketUrl = API_URL.replace('/api', ''); // remove /api to get base URL
+    const socket = io(socketUrl);
+
+    socket.on('connect', () => {
+      // Once connected, emit our anonymized username
+      const anonUsername = user ? user.username.substring(0, 3) + '***' : `Tamu-${Math.floor(Math.random() * 1000)}`;
+      socket.emit('join_safe_space', anonUsername);
+    });
+
+    socket.on('online_users', (users) => {
+      // Remove duplicates just in case one user opened multiple tabs
+      const uniqueUsers = [...new Set(users)];
+      setRealtimeOnlineUsers(uniqueUsers);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [user]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -174,10 +198,12 @@ export default function Komunitas() {
     ? [...new Set(posts.map(p => p.username))].filter(u => u !== (user ? user.username.substring(0, 3) + '***' : ''))
     : [];
 
-  const activeMembers = [
-    ...(user ? [{ username: user.username.substring(0, 3) + '***', status: 'online', isSelf: true }] : []),
-    ...uniquePosters.map(u => ({ username: u, status: 'online' }))
-  ];
+  const activeMembers = realtimeOnlineUsers.length > 0 
+    ? realtimeOnlineUsers.map(u => ({ username: u, status: 'online' }))
+    : [
+        ...(user ? [{ username: user.username.substring(0, 3) + '***', status: 'online', isSelf: true }] : []),
+        ...uniquePosters.map(u => ({ username: u, status: 'online' }))
+      ];
 
   return (
     <div className="max-w-6xl mx-auto flex flex-col h-[calc(100vh-100px)] space-y-3 animate-fade-in pb-2 overflow-hidden">

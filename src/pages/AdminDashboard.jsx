@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   ShieldCheck, Users, MessageSquare, Trash2, Loader2, RefreshCw,
-  TrendingUp, BarChart2, Activity, UserPlus, Edit2, Plus, X
+  TrendingUp, BarChart2, Activity, UserPlus, Edit2, Plus, X, Inbox, Check
 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import {
@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const [posts, setPosts] = useState([]);
   const [users, setUsers] = useState([]);
   const [channels, setChannels] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
   const [selectedPosts, setSelectedPosts] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +49,9 @@ export default function AdminDashboard() {
   const [channelForm, setChannelForm] = useState({ name: '', slug: '', description: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDate, setSearchDate] = useState('');
+  const [feedbackSearchQuery, setFeedbackSearchQuery] = useState('');
+  const [feedbackSearchDate, setFeedbackSearchDate] = useState('');
+  const [feedbackFilterStatus, setFeedbackFilterStatus] = useState('all');
 
   useEffect(() => {
     if (user && user.role === 'admin') fetchData();
@@ -57,18 +61,20 @@ export default function AdminDashboard() {
     setIsLoading(true);
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const [statsRes, postsRes, usersRes, analyticsRes, channelsRes] = await Promise.all([
+      const [statsRes, postsRes, usersRes, analyticsRes, channelsRes, feedbacksRes] = await Promise.all([
         fetch(`${API_URL}/admin/stats`, { headers }),
         fetch(`${API_URL}/admin/posts`, { headers }),
         fetch(`${API_URL}/admin/users`, { headers }),
         fetch(`${API_URL}/admin/analytics`, { headers }),
         fetch(`${API_URL}/posts/channels`),
+        fetch(`${API_URL}/admin/feedbacks`, { headers }),
       ]);
       if (statsRes.ok) setStats(await statsRes.json());
       if (postsRes.ok) setPosts(await postsRes.json());
       if (usersRes.ok) setUsers(await usersRes.json());
       if (analyticsRes.ok) setAnalytics(await analyticsRes.json());
       if (channelsRes.ok) setChannels(await channelsRes.json());
+      if (feedbacksRes.ok) setFeedbacks(await feedbacksRes.json());
     } catch (e) {
       console.error(e);
     } finally {
@@ -171,6 +177,38 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleUpdateFeedbackStatus = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === 'unread' ? 'read' : 'unread';
+      const res = await fetch(`${API_URL}/admin/feedbacks/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteFeedback = async (id) => {
+    if (!window.confirm('Yakin ingin menghapus masukan ini?')) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/feedbacks/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) fetchData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const openAddChannel = () => {
     setEditChannel(null);
     setChannelForm({ name: '', slug: '', description: '' });
@@ -217,6 +255,21 @@ export default function AdminDashboard() {
       setSelectedPosts(prev => [...new Set([...prev, ...filteredIds])]);
     }
   };
+
+  const filteredFeedbacks = feedbacks.filter(fb => {
+    const matchesSearch = feedbackSearchQuery.trim() === '' ||
+      fb.message.toLowerCase().includes(feedbackSearchQuery.toLowerCase()) ||
+      (fb.name || '').toLowerCase().includes(feedbackSearchQuery.toLowerCase()) ||
+      (fb.email || '').toLowerCase().includes(feedbackSearchQuery.toLowerCase()) ||
+      (fb.type || '').toLowerCase().includes(feedbackSearchQuery.toLowerCase());
+
+    const fbDateOnly = fb.created_at ? fb.created_at.substring(0, 10) : '';
+    const matchesDate = feedbackSearchDate === '' || fbDateOnly === feedbackSearchDate;
+
+    const matchesStatus = feedbackFilterStatus === 'all' || fb.status === feedbackFilterStatus;
+
+    return matchesSearch && matchesDate && matchesStatus;
+  });
 
   const handleDeleteUser = async (id, username) => {
     if (!window.confirm(`YAKIN INGIN MENGHAPUS USER ${username}? Ini akan menghapus semua data (post & mood) miliknya!`)) return;
@@ -655,6 +708,89 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Feedbacks / Kotak Masuk */}
+      <div className="glass-card p-6 animate-slide-up">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Inbox className="w-5 h-5 text-brand-500" /> Kotak Masuk Laporan & Saran
+            </h2>
+            <p className="text-xs text-[var(--t-muted)] font-medium">Ulasan, laporan bug, dan permintaan saluran dari pengguna.</p>
+          </div>
+        </div>
+
+        {/* Real-time Search & Date Filters for Feedbacks */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 p-4 rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border)] animate-fade-in">
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-secondary)' }}>Cari Kata Kunci / Nama / Tipe</label>
+            <input
+              type="text"
+              value={feedbackSearchQuery}
+              onChange={e => setFeedbackSearchQuery(e.target.value)}
+              placeholder="Ketik kata kunci pencarian..."
+              className="input-field py-2 text-xs rounded-xl w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-secondary)' }}>Filter Status</label>
+            <select
+              value={feedbackFilterStatus}
+              onChange={e => setFeedbackFilterStatus(e.target.value)}
+              className="input-field py-2 text-xs rounded-xl w-full cursor-pointer"
+            >
+              <option value="all">Semua Status</option>
+              <option value="unread">Belum Dibaca (Baru)</option>
+              <option value="read">Sudah Dibaca</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--t-secondary)' }}>Filter Berdasarkan Tanggal</label>
+            <input
+              type="date"
+              value={feedbackSearchDate}
+              onChange={e => setFeedbackSearchDate(e.target.value)}
+              className="input-field py-2 text-xs rounded-xl w-full cursor-pointer"
+              style={{ colorScheme: theme === 'dark' ? 'dark' : 'light' }}
+            />
+          </div>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-8 h-8 animate-spin text-rose-400" /></div>
+        ) : filteredFeedbacks.length === 0 ? (
+          <p className="text-center py-10 text-sm" style={{ color: 'var(--t-muted)' }}>Tidak ada masukan yang cocok dengan filter pencarian.</p>
+        ) : (
+          <div className="space-y-3">
+            {filteredFeedbacks.map(fb => (
+              <div key={fb.id} className={`p-4 rounded-xl border flex flex-col sm:flex-row gap-4 transition-all duration-150 ${fb.status === 'unread' ? 'border-brand-500/50 bg-brand-500/5' : 'border-[var(--border)] bg-[var(--bg-subtle)] opacity-75'}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-2">
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${fb.status === 'unread' ? 'bg-rose-500 text-white' : 'bg-[var(--bg-overlay)] text-[var(--t-secondary)] border border-[var(--border)]'}`}>
+                      {fb.status === 'unread' ? 'BARU' : 'DIBACA'}
+                    </span>
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 uppercase tracking-wider shrink-0">{fb.type}</span>
+                    <span className="text-xs font-bold text-[var(--t-primary)]">{fb.name || 'Anonim'}</span>
+                    {fb.email && <span className="text-xs text-[var(--t-secondary)]">({fb.email})</span>}
+                    <span className="text-[10px] text-[var(--t-muted)] font-medium ml-auto">{new Date(fb.created_at).toLocaleString('id-ID')}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-[var(--t-secondary)] break-words bg-[var(--bg-surface)] p-3 rounded-lg border border-[var(--border)]">
+                    {fb.message}
+                  </p>
+                </div>
+                <div className="flex sm:flex-col gap-2 shrink-0">
+                  <button onClick={() => handleUpdateFeedbackStatus(fb.id, fb.status)} className="flex-1 sm:flex-none btn-ghost border border-[var(--border)] px-3 py-1.5 rounded-lg flex items-center justify-center gap-2 text-xs font-semibold hover:bg-brand-500/10 hover:text-brand-500 transition-colors" title="Tandai Dibaca/Belum Dibaca">
+                    <Check className="w-4 h-4" /> {fb.status === 'unread' ? 'Tandai Dibaca' : 'Tandai Baru'}
+                  </button>
+                  <button onClick={() => handleDeleteFeedback(fb.id)} className="flex-1 sm:flex-none text-rose-500 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 px-3 py-1.5 rounded-lg flex items-center justify-center gap-2 text-xs font-semibold transition-colors" title="Hapus Masukan">
+                    <Trash2 className="w-4 h-4" /> Hapus
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

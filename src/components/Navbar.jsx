@@ -14,13 +14,12 @@ export default function Navbar() {
 
   if (token) {
     navLinks.push({ name: 'Dashboard',      path: '/',           icon: <LayoutDashboard className="w-4 h-4" /> });
+    if (user && user.role === 'admin') {
+      navLinks.push({ name: 'Admin Panel', path: '/admin', icon: <Users className="w-4 h-4 text-rose-400" /> });
+    }
     navLinks.push({ name: 'Safe Space',     path: '/komunitas',  icon: <Users className="w-4 h-4" /> });
     navLinks.push({ name: 'AI Chat',        path: '/chat',       icon: <MessageCircle className="w-4 h-4" /> });
     navLinks.push({ name: 'Settings',       path: '/settings',   icon: <Settings className="w-4 h-4" /> });
-  }
-
-  if (user && user.role === 'admin') {
-    navLinks.push({ name: 'Admin', path: '/admin', icon: <Users className="w-4 h-4 text-rose-400" /> });
   }
 
   return (
